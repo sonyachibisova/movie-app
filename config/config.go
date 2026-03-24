@@ -12,7 +12,7 @@ func LoadConfig() *Config {
 	return &Config{
 		DBHost:     "localhost",
 		DBPort:     "5432",
-		DBUser:     "postgres",
+		DBUser:     "sonya",
 		DBPassword: "postgres",
 		DBName:     "movie_app",
 	}
