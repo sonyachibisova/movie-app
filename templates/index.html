@@ -3,9 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <title>Мои фильмы</title>
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <h1>Дневник фильмов</h1>
-    <p>Приложение работает!</p>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0;">🎬 Дневник фильмов</h1>
+        <a href="/profile" style="padding: 8px 16px; background: #007bff; color: white; text-decoration: none; border-radius: 8px;">👤 Мой профиль</a>
+    </div>
+    
+    <div class="movie-grid">
+        {{range .movies}}
+        <div class="movie-card-horizontal">
+            {{if .PosterURL}}
+                <img src="{{.PosterURL}}" alt="{{.Title}}" class="movie-poster-small">
+            {{else}}
+                <div class="movie-poster-small" style="display: flex; align-items: center; justify-content: center;">Нет</div>
+            {{end}}
+            <div class="movie-info">
+                <h3 class="movie-title">{{.Title}}</h3>
+                <p class="movie-details">📅 {{.Year}}</p>
+                <p class="movie-details">🎭 {{.Genre}}</p>
+                <p class="movie-details">🎬 {{.Director}}</p>
+                <p class="movie-details">{{.Description}}</p>
+                <div style="margin-top: 12px; display: flex; gap: 8px;">
+                    <button onclick="addToList({{.ID}}, 'watched')">✅ Просмотрено</button>
+                    <button onclick="addToList({{.ID}}, 'want')">⭐ Хочу посмотреть</button>
+                </div>
+            </div>
+        </div>
+        {{end}}
+    </div>
+<script>
+function addToList(movieId, status) {
+    fetch(`/movies/${movieId}/${status}`, {
+        method: 'POST'
+    })
+    .then(response => {
+        if (response.ok) {
+            alert('Добавлено!');
+        } else {
+            alert('Ошибка');
+        }
+    });
+}
+</script>
 </body>
 </html>
