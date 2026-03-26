@@ -15,6 +15,42 @@ func stringToUint(s string) uint {
 	return i
 }
 
+func stringToFloat(s string) float32 {
+	var f float32
+	for i, ch := range s {
+		if ch == '.' {
+			continue
+		}
+
+		f = f*10 + float32(ch-'0')
+		if i == 0 && len(s) > 1 && s[1] == '.' {
+			f = f / 10
+		}
+	}
+
+	return f
+}
+
+func updateAvgRating(movieID uint) {
+	var ratings []float32
+	database.DB.Model(&models.UserMovie{}).
+		Where("movie_id = ? AND status = 'watched' AND rating is NOT NULL", movieID).
+		Pluck("rating", &ratings)
+
+	var sum float32
+	for _, r := range ratings {
+		sum += r
+	}
+
+	avg := float32(0)
+	if len(ratings) > 0 {
+		avg = sum / float32(len(ratings))
+	}
+
+	database.DB.Model(&models.Movie{}).
+		Where("id = ?", movieID).Update("avg_rating", avg)
+}
+
 func main() {
 	database.InitDB()
 
@@ -72,6 +108,32 @@ func main() {
 			c.String(500, "Ошибка")
 			return
 		}
+
+		c.String(200, "OK")
+	})
+
+	r.POST("/movies/:id/rate", func(c *gin.Context) {
+		movieID := c.Param("id")
+		rating := c.PostForm("rating")
+
+		var user models.User
+		database.DB.Where("username = ?", "me").First(&user)
+
+		var userMovie models.UserMovie
+		result := database.DB.Where("user_id = ? AND movie_id = ? AND status = ?", user.ID, movieID).
+			First(&userMovie)
+
+		if result.Error != nil {
+			c.String(404, "Фильм не найден в просмотренных")
+			return
+		}
+
+		var ratingFloat float32
+		ratingFloat = stringToFloat(rating)
+		userMovie.Rating = &ratingFloat
+		database.DB.Save(&userMovie)
+
+		updateAvgRating(stringToUint(movieID))
 
 		c.String(200, "OK")
 	})
