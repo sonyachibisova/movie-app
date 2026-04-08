@@ -9,4 +9,7 @@ type Movie struct {
 	Year        int     `json:"year"`
 	PosterURL   string  `json:"poster_url"`
 	AvgRating   float32 `gorm:"default:0" json:"avg_rating"`
+	Country     string  `json:"country"`
+	Duration    int     `json:"duration"`
+	Actors      string  `json:"actors"`
 }

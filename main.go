@@ -13,6 +13,11 @@ type WatchedMovie struct {
 	RoundedRating int
 }
 
+type MovieWithUserRating struct {
+	models.Movie
+	UserRating *float32
+}
+
 func stringToUint(s string) uint {
 	var i uint
 	for _, c := range s {
@@ -71,15 +76,23 @@ func main() {
 	r := gin.Default()
 
 	r.SetFuncMap(template.FuncMap{
-		"seq": seq,
+		"seq":   seq,
+		"round": func(f float32) int { return int(f + 0.5) },
 	})
 	r.LoadHTMLGlob("templates/*")
 
 	r.Static("/static", "./static")
 
 	r.GET("/", func(c *gin.Context) {
-		var movies []models.Movie
-		database.DB.Find(&movies)
+		var user models.User
+		database.DB.Where("username = ?", "me").First(&user)
+
+		var movies []MovieWithUserRating
+		database.DB.Table("movies").
+			Select("movies.*, user_movies.rating as user_rating").
+			Joins("LEFT JOIN user_movies ON user_movies.movie_id = movies.id AND user_movies.user_id = ? AND user_movies.status = 'watched'", user.ID).
+			Scan(&movies)
+
 		c.HTML(200, "index.html", gin.H{"movies": movies})
 	})
 
@@ -111,6 +124,27 @@ func main() {
 		c.HTML(200, "profile.html", gin.H{
 			"watched": watchedWithRating,
 			"want":    want,
+		})
+	})
+
+	r.GET("/movies/:id", func(c *gin.Context) {
+		movieID := c.Param("id")
+
+		var user models.User
+		database.DB.Where("username = ?", "me").First(&user)
+
+		var movie models.Movie
+		if err := database.DB.First(&movie, movieID).Error; err != nil {
+			c.String(404, "Фильм не найден")
+			return
+		}
+
+		var userMovie models.UserMovie
+		database.DB.Where("user_id = ? AND movie_id = ?", user.ID, movieID).First(&userMovie)
+
+		c.HTML(200, "movie.html", gin.H{
+			"movie":     movie,
+			"userMovie": userMovie,
 		})
 	})
 
@@ -168,6 +202,16 @@ func main() {
 			Assign(userMovie).FirstOrCreate(&userMovie)
 
 		updateAvgRating(stringToUint(movieID))
+
+		c.String(200, "OK")
+	})
+
+	r.POST("/movies/:id/remove", func(c *gin.Context) {
+		movieID := c.Param("id")
+		var user models.User
+		database.DB.Where("username = ?", "me").First(&user)
+
+		database.DB.Where("user_id = ? AND movie_id = ?", user.ID, movieID).Delete(&models.UserMovie{})
 
 		c.String(200, "OK")
 	})

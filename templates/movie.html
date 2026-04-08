@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>{{.movie.Title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div style="margin-bottom: 20px;">
+        <a href="/">← На главную</a>
+        <a href="/profile" style="margin-left: 20px;">👤 Профиль</a>
+    </div>
+
+    <div class="movie-detail-container">
+        {{if .movie.PosterURL}}
+            <img src="{{.movie.PosterURL}}" alt="{{.movie.Title}}" class="movie-poster-detail">
+        {{else}}
+            <div class="movie-poster-placeholder">Нет постера</div>
+        {{end}}
+        
+        <div class="movie-info-detail">
+            <h1>{{.movie.Title}}</h1>
+            <p class="movie-details"><strong>Год:</strong> {{.movie.Year}}</p>
+            <p class="movie-details"><strong>Страна:</strong> {{.movie.Country}}</p>
+            <p class="movie-details"><strong>Длительность:</strong> {{.movie.Duration}} мин</p>
+            <p class="movie-details"><strong>Жанр:</strong> {{.movie.Genre}}</p>
+            <p class="movie-details"><strong>Режиссёр:</strong> {{.movie.Director}}</p>
+            <p class="movie-details"><strong>Актёры:</strong> {{.movie.Actors}}</p>
+            
+            <p class="movie-details"><strong>Описание:</strong><br>{{.movie.Description}}</p>
+            <p class="movie-details">
+                <strong>Общая оценка:</strong>
+                {{if gt .movie.AvgRating 0.0}}
+                    {{range $i := seq (round .movie.AvgRating)}}⭐{{end}} ({{printf "%.1f" .movie.AvgRating}})
+                {{else}}
+                    пока нет оценок
+                {{end}}
+            </p>
+            <p class="movie-details">
+                <strong>Моя оценка:</strong>
+                {{if .userMovie.ID}}
+                    {{if gt .userMovie.Rating 0.0}}
+                        {{$rating := .userMovie.Rating}}
+                        {{range $i := seq 5}}
+                            {{if le $i (round $rating)}}❤️{{else}}🖤{{end}}
+                        {{end}} ({{printf "%.1f" .userMovie.Rating}})
+                    {{else}}
+                        не оценено
+                    {{end}}
+                {{else}}
+                    фильм не в просмотренных
+                {{end}}
+            </p>
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                {{if .userMovie.ID}}
+                    {{if eq .userMovie.Status "watched"}}
+                        <button disabled>✅ В просмотренных</button>
+                    {{else}}
+                        <button onclick="markAsWatched({{.movie.ID}})">✅ Отметить просмотренным</button>
+                    {{end}}
+                    <button onclick="removeFromList({{.movie.ID}})">❌ Убрать из списка</button>
+                {{else}}
+                    <button onclick="markAsWatched({{.movie.ID}})">✅ Отметить просмотренным</button>
+                    <button onclick="addToWant({{.movie.ID}})">⭐ Хочу посмотреть</button>
+                {{end}}
+            </div>
+        </div>
+    </div>
+<div id="ratingModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Оцените фильм</h3>
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+        </div>
+        <p id="modalMovieTitle"></p>
+        
+        <div class="rating-stars" id="modalStars">
+            <span class="star" data-value="1">★</span>
+            <span class="star" data-value="2">★</span>
+            <span class="star" data-value="3">★</span>
+            <span class="star" data-value="4">★</span>
+            <span class="star" data-value="5">★</span>
+        </div>
+        
+        <textarea id="modalReview" rows="3" placeholder="Ваш отзыв (необязательно)"></textarea>
+        
+        <button onclick="saveRating()" style="margin-top: 10px; padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer;">Сохранить</button>
+    </div>
+</div>
+<script>
+function markAsWatched(movieId) {
+    fetch(`/movies/${movieId}/info`)
+        .then(response => response.json())
+        .then(movie => {
+            // Показываем модалку для оценки
+            openModal(movieId, movie.title);
+        });
+}
+
+function addToWant(movieId) {
+    fetch(`/movies/${movieId}/want`, {
+        method: 'POST'
+    })
+    .then(response => {
+        if (response.ok) {
+            alert('Добавлено в "Хочу посмотреть"!');
+            location.reload();
+        }
+    });
+}
+
+function removeFromList(movieId) {
+    if (confirm('Убрать фильм из списка?')) {
+        fetch(`/movies/${movieId}/remove`, {
+            method: 'POST'
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        });
+    }
+}
+
+let currentMovieId = null;
+
+function openModal(movieId, movieTitle) {
+    currentMovieId = movieId;
+    document.getElementById('modalMovieTitle').innerText = movieTitle;
+    document.getElementById('ratingModal').style.display = 'flex';
+    document.querySelectorAll('#modalStars .star').forEach(star => star.classList.remove('active'));
+    document.getElementById('modalReview').value = '';
+}
+
+function closeModal() {
+    document.getElementById('ratingModal').style.display = 'none';
+    currentMovieId = null;
+}
+
+function saveRating() {
+    if (!currentMovieId) return;
+    let activeStars = document.querySelectorAll('#modalStars .star.active').length;
+    let review = document.getElementById('modalReview').value;
+    fetch(`/movies/${currentMovieId}/rate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `rating=${activeStars}&review=${encodeURIComponent(review)}`
+    })
+    .then(response => {
+        if (response.ok) {
+            alert('Оценка сохранена!');
+            closeModal();
+            location.reload();
+        }
+    });
+}
+
+function setupStars() {
+    document.querySelectorAll('#modalStars .star').forEach(star => {
+        star.removeEventListener('click', star.clickHandler);
+        star.clickHandler = function() {
+            let value = parseInt(this.getAttribute('data-value'));
+            document.querySelectorAll('#modalStars .star').forEach((s, index) => {
+                if (index < value) s.classList.add('active');
+                else s.classList.remove('active');
+            });
+        };
+        star.addEventListener('click', star.clickHandler);
+    });
+}
+document.addEventListener('DOMContentLoaded', setupStars);
+</script>
+</body>
+</html>

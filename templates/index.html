@@ -12,7 +12,7 @@
     </div>
     
     <div class="movie-grid">
-        {{range .movies}}
+        {{range $movie := .movies}}
         <div class="movie-card-horizontal">
             {{if .PosterURL}}
                 <img src="{{.PosterURL}}" alt="{{.Title}}" class="movie-poster-small">
@@ -20,10 +20,18 @@
                 <div class="movie-poster-small" style="display: flex; align-items: center; justify-content: center;">Нет</div>
             {{end}}
             <div class="movie-info">
-                <h3 class="movie-title">{{.Title}}</h3>
-                <p class="movie-details">⭐ Средняя оценка: 
+                <h3 class="movie-title"><a href="/movies/{{$movie.ID}}" style="text-decoration: none; color: inherit;">{{$movie.Title}}</a></h3>
+                {{if $movie.UserRating}}
+                    <p class="movie-details">
+                    Моя оценка: 
+                    {{range $i := seq 5}}
+                        {{if le $i (round $movie.UserRating)}}❤️{{else}}🖤{{end}}
+                    {{end}}
+                    </p>
+                {{end}}
+                <p class="movie-details">
                 {{if gt .AvgRating 0.0}}
-                    {{.AvgRating}} / 5
+                    {{range $i := seq (round .AvgRating)}}⭐{{end}} ({{printf "%.1f" .AvgRating}})
                 {{else}}
                     пока нет оценок
                 {{end}}

@@ -22,7 +22,7 @@
                 <div class="movie-poster-small" style="display: flex; align-items: center; justify-content: center;">Нет</div>
             {{end}}
             <div class="movie-info">
-                <h3 class="movie-title">{{.Movie.Title}}</h3>
+                <h3 class="movie-title"><a href="/movies/{{.Movie.ID}}" style="text-decoration: none; color: inherit;">{{.Movie.Title}}</a></h3>
                 <p class="movie-details">📅 {{.Movie.Year}}</p>
                 <p class="movie-details">🎭 {{.Movie.Genre}}</p>
                 <p class="movie-details">🎬 {{.Movie.Director}}</p>
@@ -43,16 +43,26 @@
             <div class="movie-poster-small" style="display: flex; align-items: center; justify-content: center;">Нет</div>
         {{end}}
         <div class="movie-info">
-            <h3 class="movie-title">{{$movie.Movie.Title}}</h3>
+            <h3 class="movie-title"><a href="/movies/{{$movie.Movie.ID}}" style="text-decoration: none; color: inherit;">{{$movie.Movie.Title}}</a></h3>
+            <p class="movie-details">
             {{if gt $movie.Rating 0.0}}
                 Моя оценка:
                 {{range $i := seq 5}}
                     {{if le $i $movie.RoundedRating}}❤️{{else}}🖤{{end}}
                 {{end}}
-                {{$movie.Rating}} / 5
+                <!-- {{$movie.Rating}} / 5 -->
             {{else}}
                 Моя оценка: пока нет
             {{end}}
+            </p>
+            <p class="movie-details">
+            {{if gt $movie.Movie.AvgRating 0.0}}
+                Общая оценка: 
+                {{range $i := seq (round $movie.Movie.AvgRating)}}⭐{{end}} ({{printf "%.1f" $movie.Movie.AvgRating}})
+            {{else}}
+                Общая оценка: пока нет
+            {{end}}
+            </p>
             <p class="movie-details">📅 {{$movie.Movie.Year}}</p>
             <p class="movie-details">🎭 {{$movie.Movie.Genre}}</p>
             <p class="movie-details">🎬 {{$movie.Movie.Director}}</p>

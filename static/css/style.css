@@ -112,3 +112,44 @@ textarea {
     resize: vertical;
     margin: 10px 0;
 }
+
+.movie-detail-container {
+    display: flex;
+    gap: 20px;
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-top: 20px;
+    align-items: flex-start;
+}
+
+.movie-poster-detail {
+    width: 180px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    flex-shrink: 0;
+}
+
+.movie-poster-placeholder {
+    width: 180px;
+    height: 270px;
+    background: #ddd;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    flex-shrink: 0;
+}
+
+.movie-info-detail {
+    flex: 1;
+}
+
+.movie-info-detail h1 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    border-bottom: none;
+    padding-bottom: 0;
+}
