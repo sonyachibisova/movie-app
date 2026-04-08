@@ -35,20 +35,29 @@
     
     <h2>✅ Просмотренные</h2>
     <div class="movie-grid">
-        {{range .watched}}
-        <div class="movie-card-horizontal">
-            {{if .Movie.PosterURL}}
-                <img src="{{.Movie.PosterURL}}" alt="{{.Movie.Title}}" class="movie-poster-small">
+    {{range $movie := .watched}}
+    <div class="movie-card-horizontal">
+        {{if $movie.Movie.PosterURL}}
+            <img src="{{$movie.Movie.PosterURL}}" alt="{{$movie.Movie.Title}}" class="movie-poster-small">
+        {{else}}
+            <div class="movie-poster-small" style="display: flex; align-items: center; justify-content: center;">Нет</div>
+        {{end}}
+        <div class="movie-info">
+            <h3 class="movie-title">{{$movie.Movie.Title}}</h3>
+            {{if gt $movie.Rating 0.0}}
+                Моя оценка:
+                {{range $i := seq 5}}
+                    {{if le $i $movie.RoundedRating}}❤️{{else}}🖤{{end}}
+                {{end}}
+                {{$movie.Rating}} / 5
             {{else}}
-                <div class="movie-poster-small" style="display: flex; align-items: center; justify-content: center;">Нет</div>
+                Моя оценка: пока нет
             {{end}}
-            <div class="movie-info">
-                <h3 class="movie-title">{{.Movie.Title}}</h3>
-                <p class="movie-details">📅 {{.Movie.Year}}</p>
-                <p class="movie-details">🎭 {{.Movie.Genre}}</p>
-                <p class="movie-details">🎬 {{.Movie.Director}}</p>
-            </div>
+            <p class="movie-details">📅 {{$movie.Movie.Year}}</p>
+            <p class="movie-details">🎭 {{$movie.Movie.Genre}}</p>
+            <p class="movie-details">🎬 {{$movie.Movie.Director}}</p>
         </div>
+    </div>
         {{else}}
         <p>Список пуст</p>
         {{end}}

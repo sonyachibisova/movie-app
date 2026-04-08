@@ -1,11 +1,17 @@
 package main
 
 import (
+	"html/template"
 	"movie-app/database"
 	"movie-app/models"
 
 	"github.com/gin-gonic/gin"
 )
+
+type WatchedMovie struct {
+	models.UserMovie
+	RoundedRating int
+}
 
 func stringToUint(s string) uint {
 	var i uint
@@ -51,11 +57,22 @@ func updateAvgRating(movieID uint) {
 		Where("id = ?", movieID).Update("avg_rating", avg)
 }
 
+func seq(n int) []int {
+	result := make([]int, n)
+	for i := 0; i < n; i++ {
+		result[i] = i + 1
+	}
+	return result
+}
+
 func main() {
 	database.InitDB()
 
 	r := gin.Default()
 
+	r.SetFuncMap(template.FuncMap{
+		"seq": seq,
+	})
 	r.LoadHTMLGlob("templates/*")
 
 	r.Static("/static", "./static")
@@ -70,11 +87,11 @@ func main() {
 		var user models.User
 		database.DB.Where("username = ?", "me").First(&user)
 
-		var UserMovies []models.UserMovie
-		database.DB.Preload("Movie").Where("user_id = ?", user.ID).Find(&UserMovies)
+		var userMovies []models.UserMovie
+		database.DB.Preload("Movie").Where("user_id = ?", user.ID).Find(&userMovies)
 
 		var watched, want []models.UserMovie
-		for _, um := range UserMovies {
+		for _, um := range userMovies {
 			if um.Status == "watched" {
 				watched = append(watched, um)
 			} else {
@@ -82,10 +99,26 @@ func main() {
 			}
 		}
 
+		var watchedWithRating []WatchedMovie
+		for _, w := range watched {
+			rounded := int(w.Rating + 0.5)
+			watchedWithRating = append(watchedWithRating, WatchedMovie{
+				UserMovie:     w,
+				RoundedRating: rounded,
+			})
+		}
+
 		c.HTML(200, "profile.html", gin.H{
-			"watched": watched,
+			"watched": watchedWithRating,
 			"want":    want,
 		})
+	})
+
+	r.GET("/movies/:id/info", func(c *gin.Context) {
+		movieID := c.Param("id")
+		var movie models.Movie
+		database.DB.First(&movie, movieID)
+		c.JSON(200, gin.H{"title": movie.Title})
 	})
 
 	r.POST("/movies/:id/:status", func(c *gin.Context) {
@@ -115,23 +148,24 @@ func main() {
 	r.POST("/movies/:id/rate", func(c *gin.Context) {
 		movieID := c.Param("id")
 		rating := c.PostForm("rating")
+		review := c.PostForm("review")
 
 		var user models.User
 		database.DB.Where("username = ?", "me").First(&user)
 
-		var userMovie models.UserMovie
-		result := database.DB.Where("user_id = ? AND movie_id = ? AND status = ?", user.ID, movieID).
-			First(&userMovie)
-
-		if result.Error != nil {
-			c.String(404, "Фильм не найден в просмотренных")
-			return
+		userMovie := models.UserMovie{
+			UserID:  user.ID,
+			MovieID: stringToUint(movieID),
+			Status:  "watched",
+			Review:  review,
 		}
 
-		var ratingFloat float32
-		ratingFloat = stringToFloat(rating)
-		userMovie.Rating = &ratingFloat
-		database.DB.Save(&userMovie)
+		if rating != "" {
+			userMovie.Rating = stringToFloat(rating)
+		}
+
+		database.DB.Where("user_id = ? AND movie_id = ?", user.ID, movieID).
+			Assign(userMovie).FirstOrCreate(&userMovie)
 
 		updateAvgRating(stringToUint(movieID))
 

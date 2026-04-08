@@ -41,18 +41,111 @@
         {{end}}
     </div>
 <script>
+
 function addToList(movieId, status) {
-    fetch(`/movies/${movieId}/${status}`, {
-        method: 'POST'
+    if (status === 'watched') {
+        fetch(`/movies/${movieId}/info`)
+            .then(response => response.json())
+            .then(movie => {
+                openModal(movieId, movie.title);
+                window.pendingMovieId = movieId;
+            });
+    } else {
+        fetch(`/movies/${movieId}/${status}`, {
+            method: 'POST'
+        })
+        .then(response => {
+            if (response.ok) {
+                alert('Добавлено в "Хочу посмотреть"!');
+            }
+        });
+    }
+}
+
+let currentMovieId = null;
+
+function openModal(movieId, movieTitle) {
+    currentMovieId = movieId;
+    document.getElementById('modalMovieTitle').innerText = movieTitle;
+    document.getElementById('ratingModal').style.display = 'flex';
+    
+    document.querySelectorAll('#modalStars .star').forEach(star => {
+        star.classList.remove('active');
+    });
+    document.getElementById('modalReview').value = '';
+    
+    setupStars();  
+}
+
+function closeModal() {
+    document.getElementById('ratingModal').style.display = 'none';
+    currentMovieId = null;
+}
+
+function saveRating() {
+    if (!currentMovieId) return;
+    
+    let activeStars = document.querySelectorAll('#modalStars .star.active').length;
+    let review = document.getElementById('modalReview').value;
+    
+    fetch(`/movies/${currentMovieId}/rate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `rating=${activeStars}&review=${encodeURIComponent(review)}`
     })
     .then(response => {
         if (response.ok) {
-            alert('Добавлено!');
+            alert('Оценка сохранена!');
+            closeModal();
         } else {
             alert('Ошибка');
         }
     });
 }
+
+function setupStars() {
+    document.querySelectorAll('#modalStars .star').forEach(star => {
+        star.removeEventListener('click', star.clickHandler);
+        star.clickHandler = function() {
+            let value = parseInt(this.getAttribute('data-value'));
+            document.querySelectorAll('#modalStars .star').forEach((s, index) => {
+                if (index < value) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+        };
+        star.addEventListener('click', star.clickHandler);
+    });
+}
+
+
+document.addEventListener('DOMContentLoaded', setupStars);
 </script>
+<!-- Модальное окно -->
+<div id="ratingModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Оцените фильм</h3>
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+        </div>
+        <p id="modalMovieTitle"></p>
+        
+        <div class="rating-stars" id="modalStars">
+            <span class="star" data-value="1">★</span>
+            <span class="star" data-value="2">★</span>
+            <span class="star" data-value="3">★</span>
+            <span class="star" data-value="4">★</span>
+            <span class="star" data-value="5">★</span>
+        </div>
+        
+        <textarea id="modalReview" rows="3" placeholder="Ваш отзыв (необязательно)"></textarea>
+        
+        <button onclick="saveRating()" style="margin-top: 10px; padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer;">Сохранить</button>
+    </div>
+</div>
 </body>
 </html>
